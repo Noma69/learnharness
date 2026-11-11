@@ -5,6 +5,12 @@ import { MAX_IMPORT_BODY_BYTES } from "./lib/notes-import-limits.ts";
 const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf8")) as { version: string; homepage: string };
 
 const nextConfig: NextConfig = {
+	allowedDevOrigins: [
+		"vnic-nomathe76-hermes.tail0ae9ec.ts.net",
+		"vnic-nomathe76-hermes.tail0ae9ec.ts.net:3000",
+		"100.107.190.117",
+		"100.107.190.117:3000",
+	],
 	// Public build metadata only; no new runtime Electron version API.
 	env: { LH_VERSION: pkg.version, LH_HOMEPAGE: pkg.homepage },
 	// Leave multipart headroom above the 25 MiB file allowance. This is a
