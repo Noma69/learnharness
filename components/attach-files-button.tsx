@@ -2,11 +2,12 @@
 
 import { cloneElement, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type ReactElement, type RefObject } from "react";
 import { createPortal } from "react-dom";
-import { PaperclipIcon } from "lucide-react";
+import { GraduationCapIcon, PaperclipIcon } from "lucide-react";
 import { directoryReferencePath, quoteFilePath } from "@/src/core";
 import { Hint } from "@/components/ui/hint";
 import { INSERT_FILE_PATHS_EVENT } from "@/components/path-input";
 import { BROWSER_NOTICE } from "@/components/file-path-drop-zone";
+import { BabelSelectModal } from "@/components/babel/babel-select-modal";
 import { InteractionLayerOwner, useInteractionLayer, useInteractionLayers, useOptionalInteractionLayers } from "./interaction-layers";
 import { INTERACTION_LAYER_Z_BASE } from "./host-dialog";
 import { isInteractionScopeEligible } from "./plugin-input-focus";
@@ -89,6 +90,7 @@ export function AttachFilesButton({ editorRef }: { editorRef: React.RefObject<HT
 	const popupRef = useRef<HTMLDivElement>(null);
 	const choosingFolder = useRef(false);
 	const [open, setOpen] = useState(false);
+	const [babelModalOpen, setBabelModalOpen] = useState(false);
 	const [notice, setNotice] = useState("");
 	const [placement, setPlacement] = useState<ReturnType<typeof attachmentPopupPlacement> | null>(null);
 	const positioned = placement !== null;
@@ -156,7 +158,7 @@ export function AttachFilesButton({ editorRef }: { editorRef: React.RefObject<HT
 					e.currentTarget.value = ""; // allow re-picking the same file
 				}}
 			/>
-			<Hint label={desktop ? "Attach files or a folder" : BROWSER_NOTICE}>
+			<Hint label={desktop ? "Attach files, a folder or Babel ICS courses" : "Attach Babel ICS courses or files"}>
 				<button
 					ref={buttonRef}
 					type="button"
@@ -165,8 +167,8 @@ export function AttachFilesButton({ editorRef }: { editorRef: React.RefObject<HT
 					aria-haspopup="menu"
 					aria-expanded={open}
 					data-testid="attach-files"
-					onClick={() => { if (desktop) { setNotice(""); setOpen(!open); } }}
-					className="flex size-10 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground aria-disabled:cursor-default aria-disabled:opacity-40 aria-disabled:hover:bg-transparent aria-disabled:hover:text-muted-foreground"
+					onClick={() => { setNotice(""); setOpen(!open); }}
+					className="flex size-10 shrink-0 items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:bg-accent hover:text-foreground cursor-pointer"
 				>
 					<PaperclipIcon className="size-4" />
 				</button>
@@ -183,12 +185,29 @@ export function AttachFilesButton({ editorRef }: { editorRef: React.RefObject<HT
 					if (next >= 0) { event.preventDefault(); buttons[next]?.focus(); }
 				}}>
 				{open ? <>
-					<button type="button" role="menuitem" className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
-						onClick={() => { setOpen(false); pickerRef.current?.click(); }}>Files</button>
-					<button type="button" role="menuitem" className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-accent"
+					<button type="button" role="menuitem" className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-accent cursor-pointer"
+						onClick={() => {
+							if (!desktop) { setOpen(false); setNotice(BROWSER_NOTICE); return; }
+							setOpen(false);
+							pickerRef.current?.click();
+						}}>Files</button>
+					<button type="button" role="menuitem" className="block w-full rounded px-2 py-1 text-left text-xs hover:bg-accent cursor-pointer"
 						onClick={() => { void chooseFolder(); }}>Folder</button>
+					<div className="my-1 border-t border-border/50" />
+					<button type="button" role="menuitem" className="flex items-center gap-1.5 w-full rounded px-2 py-1 text-left text-xs font-medium text-sky-400 hover:bg-accent hover:text-sky-300 cursor-pointer"
+						onClick={() => { setOpen(false); setBabelModalOpen(true); }}>
+						<GraduationCapIcon className="size-3.5 shrink-0" />
+						<span>Cours Babel ICS…</span>
+					</button>
 				</> : notice}
 			</div></AttachmentPopup>}
+			<BabelSelectModal
+				open={babelModalOpen}
+				onClose={() => setBabelModalOpen(false)}
+				onSelectPaths={(paths) => {
+					if (paths.length > 0) editorRef.current?.dispatchEvent(new CustomEvent(INSERT_FILE_PATHS_EVENT, { detail: paths }));
+				}}
+			/>
 		</div>
 	);
 }

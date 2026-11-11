@@ -41,9 +41,12 @@ async function fixture({ desktop = true } = {}) {
 	let sends = 0;
 	let value = "readthis";
 	const previous = new Map<string, PropertyDescriptor | undefined>();
+	const style = () => ({ getPropertyValue: () => "", paddingLeft: "0px", paddingRight: "0px", marginLeft: "0px", marginRight: "0px", borderLeftWidth: "0px", borderRightWidth: "0px" });
+	Object.assign(win, { getComputedStyle: style });
 	for (const [name, next] of Object.entries({
 		React, window: win, document: doc, Node: win.Node, HTMLElement: win.HTMLElement, Element: win.Element,
 		Event: win.Event, CustomEvent: win.CustomEvent, IS_REACT_ACT_ENVIRONMENT: true, innerWidth: 1000, innerHeight: 800,
+		getComputedStyle: style, MutationObserver: win.MutationObserver,
 	})) {
 		previous.set(name, Object.getOwnPropertyDescriptor(globalThis, name));
 		Object.defineProperty(globalThis, name, { configurable: true, writable: true, value: next });
@@ -190,7 +193,7 @@ describe("composer attach button", () => {
 		f.caret(4);
 		await act(async () => { f.button.click(); });
 		assert.equal(f.pickerClicks, 0);
-		assert.deepEqual(Array.from(f.doc.querySelectorAll('[role="menuitem"]')).map((item) => item.textContent), ["Files", "Folder"]);
+		assert.deepEqual(Array.from(f.doc.querySelectorAll('[role="menuitem"]')).map((item) => item.textContent), ["Files", "Folder", "Cours Babel ICS…"]);
 		await f.choice("Files");
 		assert.equal(f.pickerClicks, 1);
 		const paths = ["/course/week 3.pdf", "/photos/board.jpg"];
@@ -264,9 +267,11 @@ describe("composer attach button", () => {
 		assert.equal((await f.key("ArrowDown")).defaultPrevented, true);
 		assert.equal(f.doc.activeElement!.textContent, "Folder");
 		await f.key("ArrowDown");
+		assert.equal(f.doc.activeElement!.textContent, "Cours Babel ICS…");
+		await f.key("ArrowDown");
 		assert.equal(f.doc.activeElement!.textContent, "Files");
 		await f.key("End");
-		assert.equal(f.doc.activeElement!.textContent, "Folder");
+		assert.equal(f.doc.activeElement!.textContent, "Cours Babel ICS…");
 		await f.key("Home");
 		assert.equal(f.doc.activeElement!.textContent, "Files");
 		assert.equal((await f.key("Escape")).defaultPrevented, true);
@@ -294,5 +299,19 @@ describe("composer attach button", () => {
 		assert.equal(f.pickerClicks, 0);
 		await f.pick([f.file("a.pdf", "/a.pdf")]);
 		assert.equal(f.value, "readthis");
+	});
+
+	it("Babel choice opens the Babel modal and selecting paths inserts them at the caret", async () => {
+		const f = await fixture();
+		f.caret(4);
+		await act(async () => { f.button.click(); });
+		await f.choice("Cours Babel ICS…");
+		assert.equal(f.doc.querySelector('[aria-label="Sélectionner des cours Babel ICS"]') !== null, true);
+		const editor = f.doc.querySelector<HTMLElement>("[data-file-path-input]")!;
+		await act(async () => {
+			editor.dispatchEvent(new CustomEvent("lh:insert-file-paths", { detail: ["/home/absol/workspace/babel-ics/public/uploads/courses/mathematiques/module_1.pdf"] }));
+		});
+		assert.equal(f.value, "read `/home/absol/workspace/babel-ics/public/uploads/courses/mathematiques/module_1.pdf` this");
+		await f.key("Escape");
 	});
 });
